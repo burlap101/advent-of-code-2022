@@ -31,6 +31,7 @@ object Day3 {
       })
       accum += alphabet.indexOf(common(0))+1
     }
+    reader.close()
     accum
   }
 
@@ -38,5 +39,4 @@ object Day3 {
     println(s"Part1: ${part1("input/day3/actual.txt")}")
     println(s"Part2: ${part2("input/day3/actual.txt")}")
   }
-
 }
