@@ -1,4 +1,4 @@
-import Day9.{TailMovesResult, absMoveToCoords, calcTailMoves, coordsVisited, parseLine}
+import Day9.{TailMovesResult, absMoveToCoords, coordsVisited, calcTailMoves, parseLine}
 import org.scalatest.funspec.AnyFunSpec
 
 import scala.io.Source

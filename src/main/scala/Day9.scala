@@ -80,28 +80,28 @@ object Day9 {
 
   }
 
-  var coordsVisited: Set[(Int, Int)] = Set((0, 0))
+  class Section(var headPos: (Int, Int) = (0, 0), var relTailPos: (Int, Int) = (0, 0)) {
+    var coordsSeen: Set[(Int, Int)] = Set((0, 0))
 
-  def calcTailMovesV2(tailPos: (Int, Int), move: (Char, Int), headAbsPos: (Int, Int)): TailMovesResultV2 = {
-    val tm = calcTailMoves(tailPos, move)
-    val headPos = absMoveToCoords(move, headAbsPos)
-    val cv = coordsVisited(tm.mvCnt, headPos, tm.tailPos)
-    val cnt = cv.count(!coordsVisited.contains(_))
-    coordsVisited = cv ++ coordsVisited
-    TailMovesResultV2(tm.tailPos, cnt, headPos)
+    def calcTailMovesV2(move: (Char, Int)): Int = {
+      val tm = calcTailMoves(relTailPos, move)
+      val nextHeadPos = absMoveToCoords(move, headPos)
+      val cv = coordsVisited(tm.mvCnt, nextHeadPos, tm.tailPos)
+      val cnt = cv.count(!coordsSeen.contains(_))
+      coordsSeen = cv ++ coordsSeen
+      relTailPos = tm.tailPos
+      headPos = nextHeadPos
+      cnt
+    }
   }
 
   def part1(lines: Vector[String]): Long = {
-    var relTailPos = (0, 0)
-    var headPos = (0, 0)
+    val section = new Section()
     lines.map(parseLine)
-      .map(mv => {
-        val res = calcTailMovesV2(relTailPos, mv, headPos)
-        relTailPos = res.tailPos
-        headPos = res.headAbsCoords
-        res.mvCnt
+      .foreach(mv => {
+        section.calcTailMovesV2(mv)
       })
-      .sum + 1
+    section.coordsSeen.size
   }
 
   def main(args: Array[String]): Unit = {
