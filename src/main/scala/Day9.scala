@@ -1,3 +1,4 @@
+import scala.annotation.tailrec
 import scala.io.Source
 
 object Day9 {
@@ -5,18 +6,6 @@ object Day9 {
   def parseLine(input: String): (Char, Int) = {
     val sp = input.split(" ")
     (sp(0).charAt(0), sp(1).toInt)
-  }
-
-  def foldBack(moves: Int): Int = {
-    if (moves >= 2) moves - 2 else 0
-  }
-
-  def turn90(moves: Int): Int = {
-    if (moves >= 1) moves - 1 else 0
-  }
-
-  def turn90OnOne(moves: Int): Int = {
-    if (moves >= 2) moves - 2 else 0
   }
 
   def moveToCoords(mv: (Char, Int)): (Int, Int) = {
@@ -37,24 +26,35 @@ object Day9 {
     }
   }
 
-  def coordsVisited(mvCnt: Int, headAbsPos: (Int, Int), tailPos: (Int, Int)): Set[(Int, Int)] = {
-    if (mvCnt == 0) Set() else {
+  def absMoveToCoordsV2(mv: (Char, Int), originalPos: (Int, Int)): Vector[(Int, Int)] = {
+    mv._1 match {
+      case 'R' =>
+        (originalPos._1 + 1 to mv._2 + originalPos._1).toVector.map((_, originalPos._2))
+      case 'L' =>
+        (originalPos._1 - mv._2 until originalPos._1).reverse.toVector.map((_, originalPos._2))
+      case 'U' =>
+        (originalPos._2 + 1 to originalPos._2 + mv._2).toVector.map((originalPos._1, _))
+      case 'D' =>
+        (originalPos._2 - mv._2 until originalPos._2).reverse.toVector.map((originalPos._1, _))
+    }
+  }
+
+  def coordsVisited(mvCnt: Int, headAbsPos: (Int, Int), tailPos: (Int, Int)): Vector[(Int, Int)] = {
+    if (mvCnt == 0) Vector() else {
       tailPos match {
         case (0, -1) =>
-          (headAbsPos._2 - mvCnt until headAbsPos._2).map((headAbsPos._1, _)).toSet
+          (headAbsPos._2 - mvCnt until headAbsPos._2).toVector.map((headAbsPos._1, _))
         case (0, 1) =>
-          (headAbsPos._2 + 1 to headAbsPos._2 + mvCnt).map((headAbsPos._1, _)).toSet
+          (headAbsPos._2 + 1 to headAbsPos._2 + mvCnt).toVector.map((headAbsPos._1, _))
         case (-1, 0) =>
-          (headAbsPos._1 - mvCnt until headAbsPos._1).map((_, headAbsPos._2)).toSet
+          (headAbsPos._1 - mvCnt until headAbsPos._1).toVector.map((_, headAbsPos._2))
         case (1, 0) =>
-          (headAbsPos._1 + 1 to headAbsPos._1 + mvCnt).map((_, headAbsPos._2)).toSet
+          (headAbsPos._1 + 1 to headAbsPos._1 + mvCnt).toVector.map((_, headAbsPos._2))
       }
     }
   }
 
   case class TailMovesResult(tailPos: (Int, Int), mvCnt: Int)
-
-  case class TailMovesResultV2(tailPos: (Int, Int), mvCnt: Int, headAbsCoords: (Int, Int))
 
   def calcTailMoves(tailPos: (Int, Int), move: (Char, Int)): TailMovesResult = {
     val mvCoords = moveToCoords(move)
@@ -77,21 +77,48 @@ object Day9 {
       if (tailZero(1) > 0) 1 else if (tailZero(1) < 0) -1 else 0
     )
     TailMovesResult(newTailPos, mvCnt)
-
   }
 
   class Section(var headPos: (Int, Int) = (0, 0), var relTailPos: (Int, Int) = (0, 0)) {
-    var coordsSeen: Set[(Int, Int)] = Set((0, 0))
+    var coordsSeen: Set[(Int, Int)] = Set(tailAbsPos())
 
-    def calcTailMovesV2(move: (Char, Int)): Int = {
+    def calcTailMovesV2(move: (Char, Int)): Vector[(Int, Int)] = {
       val tm = calcTailMoves(relTailPos, move)
       val nextHeadPos = absMoveToCoords(move, headPos)
       val cv = coordsVisited(tm.mvCnt, nextHeadPos, tm.tailPos)
-      val cnt = cv.count(!coordsSeen.contains(_))
-      coordsSeen = cv ++ coordsSeen
+      coordsSeen = cv.toSet ++ coordsSeen
       relTailPos = tm.tailPos
       headPos = nextHeadPos
-      cnt
+      cv
+    }
+
+    def tailAbsPos(): (Int, Int) = {
+      (headPos._1 + relTailPos._1, headPos._2 + relTailPos._2)
+    }
+
+    def moveViaCommand(move: (Char, Int)): Vector[(Int, Int)] = {
+      val headMoves = absMoveToCoordsV2(move, headPos)
+      moveViaHead(headMoves)
+    }
+
+    def moveViaHead(headCoordsSeen: Vector[(Int, Int)]): Vector[(Int, Int)] = {
+      val cv = headCoordsSeen.map(coords => {
+        val currTailPos = tailAbsPos()
+        headPos = coords
+        val diff = (headPos._1 - currTailPos._1, headPos._2 - currTailPos._2)
+        if (math.abs(diff._1) == 2 && math.abs(diff._2) == 2) {
+          relTailPos = (if (diff._1 > 0) -1 else 1, if (diff._2 > 0) -1 else 1)
+        } else if (math.abs(diff._1) > 1) {
+          relTailPos = (if (diff._1 > 0) -1 else 1, 0)
+        } else if (math.abs(diff._2) > 1) {
+          relTailPos = (0, if (diff._2 > 0) -1 else 1)
+        } else {
+          relTailPos = (-diff._1, -diff._2)
+        }
+        tailAbsPos()
+      })
+      coordsSeen = cv.toSet ++ coordsSeen
+      cv
     }
   }
 
@@ -104,10 +131,30 @@ object Day9 {
     section.coordsSeen.size
   }
 
+  @tailrec
+  def performMoves(sections: Vector[Section], headMoves: Vector[(Int, Int)]): Vector[(Int, Int)] = {
+    if (sections.size == 1) {
+      sections.head.moveViaHead(headMoves)
+    } else {
+      performMoves(sections.tail, sections.head.moveViaHead(headMoves))
+    }
+  }
+  def part2(lines: Vector[String]): Int = {
+    val sections: Vector[Section] = Vector.fill(9){new Section()}
+    lines.map(parseLine)
+      .flatMap(mv => {
+        val headMoves = sections.head.moveViaCommand(mv)
+        performMoves(sections.tail, headMoves)
+      })
+      .toSet
+      .size
+  }
+
   def main(args: Array[String]): Unit = {
     val src = Source.fromFile("input/day9/actual.txt")
     val lines = src.getLines().toVector
     src.close()
     println(s"Part1: ${part1(lines)}")
+    println(s"Part2: ${part2(lines)}")
   }
 }
