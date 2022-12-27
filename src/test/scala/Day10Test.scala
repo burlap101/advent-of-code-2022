@@ -92,4 +92,23 @@ class Day10Test extends AnyFunSpec {
       assert(part1(lines) == 13140)
     }
   }
+  describe("Day10.part2") {
+    it("should produce the same output as the example") {
+      val src = Source.fromFile("input/day10/test.txt")
+      val lines = src.getLines().toVector
+      src.close()
+      val expected =
+        """
+          |##..##..##..##..##..##..##..##..##..##..
+          |###...###...###...###...###...###...###.
+          |####....####....####....####....####....
+          |#####.....#####.....#####.....#####.....
+          |######......######......######......####
+          |#######.......#######.......#######.....
+          |""".stripMargin.replaceAll("\n", "")
+      val p2 = part2(lines)
+      part2renderer(p2)
+      assert(p2 == expected)
+    }
+  }
 }
