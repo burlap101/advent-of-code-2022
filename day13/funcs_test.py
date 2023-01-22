@@ -22,5 +22,5 @@ class TestFuncs(unittest.TestCase):
     def test_part1(self):
         self.assertEqual(funcs.part1("input/test.txt"), 13)
 
-
-
+    def test_part2(self):
+        self.assertEqual(funcs.part2("input/test.txt"), 140)

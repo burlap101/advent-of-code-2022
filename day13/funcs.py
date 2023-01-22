@@ -1,3 +1,6 @@
+from functools import cmp_to_key
+
+
 def extract_packet_pairs(lines: list[str]) -> list[(str, str)]:
     result: list[(str, str)] = list()
     for i in range(0, len(lines), 3):
@@ -58,3 +61,26 @@ def part1(filename: str) -> int:
         return sum_of_indices
 
 
+def cmp_translator(l1: str, l2: str) -> int:
+    res = compare_lists(eval(l1), eval(l2))
+    if res == -1:
+        return 0
+    elif res == 1:
+        return -1
+    return 1
+
+
+def part2(filename: str) -> int:
+    with open(filename, 'r') as f:
+        lines = f.readlines()
+        tups = extract_packet_pairs(lines)
+        full_list: list[str] = []
+        for t1, t2 in tups:
+            full_list.append(t1)
+            full_list.append(t2)
+        sep1 = "[[2]]"
+        sep2 = "[[6]]"
+        full_list.append(sep1)
+        full_list.append(sep2)
+        srtd = sorted(full_list, key=cmp_to_key(cmp_translator))
+        return (srtd.index(sep1)+1)*(srtd.index(sep2)+1)
