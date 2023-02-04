@@ -1,3 +1,4 @@
+import scala.annotation.tailrec
 import scala.io.Source
 
 object Day15 {
@@ -29,15 +30,42 @@ object Day15 {
     CaveDimensions(xs.min, xs.max, ys.min, ys.max)
   }
 
-  def calcCoverageForRow(roi: Long, sensors: List[Sensor]): Set[Long] = {
-    val beaconSet = sensors.filter(_.beacon.loc._2 == roi).map(_.beacon.loc._1).toSet
-    sensors.flatMap(s => {
+  case class RowSpan(start: Long, end: Long) {
+    def contains(i: Long): Boolean = start <= i || i <= end
+    def join(that: RowSpan): Option[RowSpan] = {
+      if (this.contains(that.start) || this.contains(that.end)) {
+        Some(
+          RowSpan(
+            List(this.start, that.start).min,
+            List(this.end, that.end).max,
+          )
+        )
+      } else None
+    }
+  }
+
+  def calcCoverageForRow(roi: Long, sensors: List[Sensor]): Long = {
+    val beaconSet: Set[Long] = sensors.filter(_.beacon.loc._2 == roi).map(_.beacon.loc._1).toSet
+    val spans: List[RowSpan] = sensors.map(s => {
       val center = s.loc._1
       val distanceFromRow = math.abs(s.loc._2 - roi)
       val countHalf = s.distance() - distanceFromRow
-      ((center - countHalf) to (center + countHalf)).toSet
-    }).toSet.diff(beaconSet)
+      RowSpan(center - countHalf, center + countHalf)
+    })
+    val reducedSpans = spanJoinReduce(spans.head::Nil, spans.tail)
+    reducedSpans.map(s => s.end + 1 - s.start).sum - beaconSet.count(b => { reducedSpans.exists(r => r.contains(b)) })
   }
+
+  @tailrec
+  def spanJoinReduce(acc: List[RowSpan], todo: List[RowSpan]): List[RowSpan] = {
+    if (todo == Nil) acc else {
+      acc.head.join(todo.head) match {
+        case Some(span) => spanJoinReduce(span :: acc.tail, todo.tail)
+        case None => spanJoinReduce(acc.head :: todo.head :: acc.tail, todo.tail)
+      }
+    }
+  }
+
 
   def part1(lines: List[String], roi: Long): Long = {
     val sensors = extractSensors(lines)
@@ -45,8 +73,7 @@ object Day15 {
       .filter(s => {
         (s.loc._2 <= roi && roi <= s.loc._2 + s.distance()) || (s.loc._2 >= roi && roi >= s.loc._2 - s.distance())
       })
-    val coverage = calcCoverageForRow(roi, withinDistance)
-    coverage.size
+    calcCoverageForRow(roi, withinDistance)
   }
 
   def main(args: Array[String]): Unit = {

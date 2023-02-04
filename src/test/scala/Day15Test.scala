@@ -42,5 +42,13 @@ class Day15Test extends AnyFunSpec {
       assert(part1(lines, 10) == 26L)
     }
   }
+  describe("RowSpan.join") {
+    it("should join overlapping spans") {
+      val span1 = RowSpan(1,3)
+      val span2 = RowSpan(2,4)
+      val expected = RowSpan(1,4)
+      assert(span1.join(span2).contains(expected))
+    }
+  }
 
 }
